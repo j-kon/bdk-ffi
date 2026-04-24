@@ -1,4 +1,4 @@
-use crate::bitcoin::{Address, Key, Network, ProprietaryKey, Psbt};
+use crate::bitcoin::{Address, AddressData, Key, Network, ProprietaryKey, Psbt};
 use bdk_electrum::bdk_core::bitcoin::hex::DisplayHex;
 
 #[test]
@@ -335,7 +335,6 @@ fn test_to_address_data() {
     )
     .unwrap();
     let p2pkh_data = p2pkh.to_address_data();
-    println!("P2PKH data: {:#?}", p2pkh_data);
 
     // P2SH address
     let p2sh = Address::new(
@@ -344,7 +343,6 @@ fn test_to_address_data() {
     )
     .unwrap();
     let p2sh_data = p2sh.to_address_data();
-    println!("P2SH data: {:#?}", p2sh_data);
 
     // Segwit address (P2WPKH)
     let segwit = Address::new(
@@ -353,15 +351,16 @@ fn test_to_address_data() {
     )
     .unwrap();
     let segwit_data = segwit.to_address_data();
-    println!("Segwit data: {:#?}", segwit_data);
+
+    assert!(matches!(p2pkh_data, AddressData::P2pkh { .. }));
+    assert!(matches!(p2sh_data, AddressData::P2sh { .. }));
+    assert!(matches!(segwit_data, AddressData::Segwit { .. }));
 }
 
 #[test]
 fn test_psbt_spend_utxo() {
     let psbt = sample_psbt();
     let psbt_utxo = psbt.spend_utxo(0);
-
-    println!("Psbt utxo: {:?}", psbt_utxo);
 
     assert_eq!(
         psbt_utxo,
@@ -374,10 +373,7 @@ fn test_psbt_spend_utxo() {
 fn test_psbt_input_length() {
     let psbt = sample_psbt2();
     let psbt_inputs = psbt.input();
-    println!("Psbt Input: {:?}", psbt_inputs);
 
-    let unknown = &psbt_inputs[0].unknown;
-    println!("Unknown field in Psbt Input: {:?}", unknown);
     assert_eq!(psbt_inputs.len(), 1);
 }
 
@@ -385,7 +381,6 @@ fn test_psbt_input_length() {
 fn test_psbt_input_partial_sigs() {
     let psbt = sample_psbt();
     let psbt_inputs = psbt.input();
-    println!("Psbt Input: {:?}", psbt_inputs);
     assert_eq!(psbt_inputs.len(), 1);
 
     let psbt_input = &psbt_inputs[0];
@@ -396,7 +391,6 @@ fn test_psbt_input_partial_sigs() {
 
     let public_key = "032e15f9dfd07dfef5cf33d7c4ae05586e71fb02ff2aef77cbf2c6e69fb4ac8db1";
     let signature: Option<Vec<u8>> = partial_sigs.get(public_key).cloned();
-    println!("Signature for pubkey {}: {:?}", public_key, signature);
     assert!(
         signature.is_some(),
         "Signature for the given pubkey should be present"
@@ -404,7 +398,6 @@ fn test_psbt_input_partial_sigs() {
 
     // Convert signature from bytes to hex string (Including last byte 0x01 for sighash type)
     let signature_hex = DisplayHex::to_lower_hex_string(&signature.unwrap());
-    println!("Signature in hex: {}", signature_hex);
 
     let expected_signature_hex = "3045022100f5bd0e740480b343f6ba14229e337b4063f98d7fdbdf62dc4a10669f2f14d1150220179bc6f0836e97210a3a8b02138c8f2753f340c0ce891a6a51b357b5d54ec6e201";
     assert_eq!(
@@ -426,10 +419,6 @@ fn test_psbt_input_bip32_derivation() {
 
     let public_key = "032e15f9dfd07dfef5cf33d7c4ae05586e71fb02ff2aef77cbf2c6e69fb4ac8db1";
     let derivation = bip32_derivations.get(public_key);
-    println!(
-        "BIP32 Derivation for pubkey {}: {:?}",
-        public_key, derivation
-    );
     assert!(
         derivation.is_some(),
         "BIP32 derivation for the given pubkey should be present"
@@ -478,7 +467,6 @@ fn test_psbt_input_unknown() {
 
     let psbt_input = &psbt_inputs[0];
     let unknown = &psbt_input.unknown;
-    println!("Unknown : {:?}", unknown);
 
     assert_eq!(unknown.len(), 1, "There should be 1 unknown fields");
 
@@ -506,7 +494,6 @@ fn test_psbt_input_proprietary() {
 
     let psbt_input = &psbt_inputs[0];
     let proprietary = &psbt_input.proprietary;
-    println!("Proprietary : {:?}", proprietary);
     assert_eq!(proprietary.len(), 1, "There should be 1 proprietary fields");
     let key = proprietary.keys().next().unwrap();
     let value = proprietary.get(key).unwrap();
@@ -528,7 +515,6 @@ fn test_psbt_input_proprietary() {
 fn test_psbt_output_length() {
     let psbt = sample_psbt();
     let psbt_outputs = psbt.output();
-    println!("Psbt Output: {:?}", psbt_outputs);
 
     assert_eq!(psbt_outputs.len(), 2);
 }
@@ -536,10 +522,8 @@ fn test_psbt_output_length() {
 #[test]
 fn test_psbt_output_witness_script() {
     let psbt = sample_psbt();
-    println!("Psbt: {:?}", psbt.json_serialize());
     let psbt_outputs = psbt.output();
     assert!(!psbt_outputs.is_empty(), "Output should not be empty");
-    println!("Psbt Output: {:?}", psbt_outputs);
     let output = &psbt_outputs[0];
     let witness_script = output
         .witness_script
@@ -557,10 +541,8 @@ fn test_psbt_output_witness_script() {
 #[test]
 fn test_psbt_output_tap_tree() {
     let psbt = sample_psbt_taproot();
-    println!("Psbt: {:?}", psbt.json_serialize());
     let psbt_outputs = psbt.output();
     assert!(!psbt_outputs.is_empty(), "Output should not be empty");
-    println!("Psbt Output: {:?}", psbt_outputs);
     let output = &psbt_outputs[1];
     let tap_tree = output
         .tap_tree
@@ -581,7 +563,6 @@ fn test_psbt_output_tap_tree() {
 
     // Get script and version from the first leaf node
     let node_info = tap_tree.node_info();
-    println!("Tap tree node infos: {:?}", node_info);
 
     let leaf_nodes = node_info.leaf_nodes();
     let leaf_node = &leaf_nodes[0];

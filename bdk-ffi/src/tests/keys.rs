@@ -78,7 +78,6 @@ fn test_extend_descriptor_keys() {
     let wif = "L2wTu6hQrnDMiFNWA5na6jB12ErGQqtXwqpSL7aWquJaZG8Ai3ch";
     let extended_key = DescriptorSecretKey::from_string(wif.to_string()).unwrap();
     let result = extended_key.derive(&DerivationPath::new("m/0".to_string()).unwrap());
-    dbg!(&result);
     assert!(result.is_err());
 }
 
@@ -86,10 +85,8 @@ fn test_extend_descriptor_keys() {
 fn test_from_str_inner() {
     let key1 = "L2wTu6hQrnDMiFNWA5na6jB12ErGQqtXwqpSL7aWquJaZG8Ai3ch";
     let key2 = "tprv8ZgxMBicQKsPcwcD4gSnMti126ZiETsuX7qwrtMypr6FBwAP65puFn4v6c3jrN9VwtMRMph6nyT63NrfUL4C3nBzPcduzVSuHD7zbX2JKVc/1/1/1/*";
-    let private_descriptor_key1 = DescriptorSecretKey::from_string(key1.to_string()).unwrap();
-    let private_descriptor_key2 = DescriptorSecretKey::from_string(key2.to_string()).unwrap();
-    dbg!(private_descriptor_key1);
-    dbg!(private_descriptor_key2);
+    let _private_descriptor_key1 = DescriptorSecretKey::from_string(key1.to_string()).unwrap();
+    let _private_descriptor_key2 = DescriptorSecretKey::from_string(key2.to_string()).unwrap();
     // Should error out because you can't produce a DescriptorSecretKey from an xpub
     let key0 = "tpubDBrgjcxBxnXyL575sHdkpKohWu5qHKoQ7TJXKNrYznh5fVEGBv89hA8ENW7A8MFVpFUSvgLqc4Nj1WZcpePX6rrxviVtPowvMuGF5rdT2Vi";
     assert!(DescriptorSecretKey::from_string(key0.to_string()).is_err());
